@@ -23,8 +23,10 @@ module ActiveModel
       #     include ActiveModel::Attributes::Normalization
       #
       #     attribute :email, :string
+      #     attribute :first_name, :string
       #
       #     normalizes :email, with: -> email { email.strip.downcase }
+      #     normalizes :first_name, with: :capitalize
       #   end
       #
       #   legacy_user = User.load_from_legacy_data(...)
@@ -85,7 +87,7 @@ module ActiveModel
         #
         # ==== Options
         #
-        # * +:with+ - Any callable object that accepts the attribute's value as
+        # * +:with+ - A symbold which the attribute's value will respond to or any callable object that accepts the attribute's value as
         #   its sole argument, and returns it normalized.
         # * +:apply_to_nil+ - Whether to apply the normalization to +nil+ values.
         #   Defaults to +false+.
@@ -97,9 +99,11 @@ module ActiveModel
         #     include ActiveModel::Attributes::Normalization
         #
         #     attribute :email, :string
+        #     attribute :first_name, :string
         #     attribute :phone, :string
         #
         #     normalizes :email, with: -> email { email.strip.downcase }
+        #     normalizes :first_name, with: :capitalize
         #     normalizes :phone, with: -> phone { phone.delete("^0-9").delete_prefix("1") }
         #   end
         #
@@ -184,7 +188,13 @@ module ActiveModel
 
           private
             def normalize(value)
-              normalizer.call(value) unless value.nil? && !normalize_nil?
+              return if value.nil? && !normalize_nil?
+
+              if normalizer.is_a?(Symbol)
+                value.send(normalizer) if value.respond_to?(normalizer)
+              else
+                normalizer.call(value) unless value.nil? && !normalize_nil?
+              end
             end
         end
     end
